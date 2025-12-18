@@ -182,3 +182,64 @@ export const EmptyState = styled.div`
   padding: 2rem;
   color: #666;
 `;
+
+// ... (기존 WithdrawButton 등 유지) ...
+
+export const WithdrawButton = styled.button`
+  margin-top: 3rem;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  color: #999;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  align-self: flex-end; 
+
+  &:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+    background-color: #fff5f5;
+  }
+`;
+
+// [추가] 모달 배경
+export const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+// [추가] 모달 박스
+export const ModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+// [추가] 모달 제목
+export const ModalTitle = styled.h3`
+  margin: 0 0 1rem 0;
+  color: #333;
+`;
+
+// [추가] 모달 버튼 그룹
+export const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+`;

@@ -33,6 +33,7 @@ public class ProductServiceImpl implements ProductService {
     private final WishlistRepository wishlistRepository;
     private final MemberRepository memberRepository;
 
+    // 파일 저장 경로 (프로젝트 루트/uploads)
     private final String uploadDir = "uploads/";
 
     @Override
@@ -57,7 +58,6 @@ public class ProductServiceImpl implements ProductService {
                 .stream().map(ProductResponseDto::new).collect(Collectors.toList());
     }
 
-    // 찜 목록 조회 구현
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDto> getMemberWishlist(Long memberId) {
@@ -78,7 +78,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDto createProduct(ProductRequestDto dto) throws IOException {
-        String imageUrl = null;
+        String originName = null;
+        String changeName = null;
         MultipartFile file = dto.getImageFile();
 
         if (file != null && !file.isEmpty()) {
@@ -86,9 +87,10 @@ public class ProductServiceImpl implements ProductService {
             File dir = new File(fullPath);
             if (!dir.exists()) dir.mkdirs();
 
-            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            file.transferTo(new File(fullPath + fileName));
-            imageUrl = "/images/" + fileName;
+            originName = file.getOriginalFilename();
+            changeName = UUID.randomUUID().toString() + "_" + originName;
+
+            file.transferTo(new File(fullPath + changeName));
         }
 
         Product product = Product.builder()
@@ -97,8 +99,9 @@ public class ProductServiceImpl implements ProductService {
                 .price(dto.getPrice())
                 .seller(dto.getSeller())
                 .category(dto.getCategory())
-                .imageUrl(imageUrl)
-                .status("FOR_SALE")
+                .originName(originName) // 원본명 저장
+                .changeName(changeName) // 변경명 저장
+                // status는 기본값(FOR_SALE) 사용
                 .viewCount(0)
                 .build();
 
@@ -111,10 +114,27 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품 없음"));
 
-        if (dto.getTitle() != null) product.setTitle(dto.getTitle());
-        if (dto.getContent() != null) product.setContent(dto.getContent());
-        if (dto.getPrice() > 0) product.setPrice(dto.getPrice());
-        if (dto.getStatus() != null) product.setStatus(dto.getStatus());
+        String newOriginName = null;
+        String newChangeName = null;
+
+        // 수정 시 새 파일이 들어왔는지 확인
+        if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
+            try {
+                String fullPath = System.getProperty("user.dir") + "/" + uploadDir;
+                File dir = new File(fullPath);
+                if (!dir.exists()) dir.mkdirs();
+
+                newOriginName = dto.getImageFile().getOriginalFilename();
+                newChangeName = UUID.randomUUID().toString() + "_" + newOriginName;
+
+                dto.getImageFile().transferTo(new File(fullPath + newChangeName));
+            } catch (IOException e) {
+                throw new RuntimeException("파일 수정 중 오류 발생", e);
+            }
+        }
+
+        // 엔티티의 수정 메서드 호출 (파일 변경 없으면 null 전달됨)
+        product.updateProduct(dto, newOriginName, newChangeName);
 
         return new ProductResponseDto(product);
     }

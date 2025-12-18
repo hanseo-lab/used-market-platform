@@ -1,5 +1,6 @@
 package com.kh.board.entity;
 
+import com.kh.board.dto.request.MemberUpdateDto;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -7,8 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 @Table(name = "members")
@@ -27,8 +27,18 @@ public class Member {
     @Column(nullable = false)
     private String name;
 
-    private String address; // [추가] 주소
+    private String address;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    public void updateMember(MemberUpdateDto dto) {
+        if (dto.getAddress() != null) {
+            this.address = dto.getAddress();
+        }
+        // 비밀번호가 입력된 경우에만 변경
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            this.password = dto.getPassword();
+        }
+    }
 }

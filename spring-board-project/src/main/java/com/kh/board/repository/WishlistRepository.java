@@ -1,13 +1,12 @@
 package com.kh.board.repository;
 
 import com.kh.board.entity.Wishlist;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
-    boolean existsByMemberIdAndProductId(Long memberId, Long productId);
+public interface WishlistRepository {
+    Wishlist save(Wishlist wishlist);
     void deleteByMemberIdAndProductId(Long memberId, Long productId);
-
-    // 내 찜 목록 조회 (최신순)
+    boolean existsByMemberIdAndProductId(Long memberId, Long productId);
     List<Wishlist> findByMemberIdOrderByIdDesc(Long memberId);
+    void deleteByMemberId(Long memberId);
 }

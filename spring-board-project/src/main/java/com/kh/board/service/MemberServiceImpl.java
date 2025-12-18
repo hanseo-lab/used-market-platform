@@ -2,16 +2,25 @@ package com.kh.board.service;
 
 import com.kh.board.dto.request.MemberUpdateDto;
 import com.kh.board.entity.Member;
+import com.kh.board.entity.Product;
 import com.kh.board.repository.MemberRepository;
+import com.kh.board.repository.ProductRepository;
+import com.kh.board.repository.ReplyRepository;
+import com.kh.board.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
+    private final ProductRepository productRepository;
+    private final ReplyRepository replyRepository;
+    private final WishlistRepository wishlistRepository;
 
     @Override
     public Member login(String email, String password) {
@@ -33,14 +42,35 @@ public class MemberServiceImpl implements MemberService {
     public Member updateMember(Long id, MemberUpdateDto dto) {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
-
-        if (dto.getAddress() != null) {
-            member.setAddress(dto.getAddress());
-        }
-        // 비밀번호가 입력되었을 때만 변경
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            member.setPassword(dto.getPassword());
-        }
+        member.updateMember(dto);
         return member;
+    }
+
+    // [수정] 비밀번호 검증 로직 추가
+    @Override
+    @Transactional
+    public void deleteMember(Long id, String password) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        // ★ 비밀번호 확인
+        if (!member.getPassword().equals(password)) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // 1. 찜 목록 삭제
+        wishlistRepository.deleteByMemberId(id);
+
+        // 2. 댓글 삭제
+        replyRepository.deleteByMemberId(id);
+
+        // 3. 상품 삭제
+        List<Product> myProducts = productRepository.findBySeller(member.getName());
+        for (Product product : myProducts) {
+            productRepository.deleteById(product.getId());
+        }
+
+        // 4. 회원 삭제
+        memberRepository.deleteById(id);
     }
 }
