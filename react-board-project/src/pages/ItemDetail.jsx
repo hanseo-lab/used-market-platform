@@ -23,6 +23,10 @@ const ItemDetailPage = () => {
   const [newComment, setNewComment] = useState("");
   const [isWished, setIsWished] = useState(false);
 
+  // [추가] 댓글 수정 상태 관리
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editContent, setEditContent] = useState("");
+
   useEffect(() => {
     const loadItem = async () => {
       const foundItem = await getItemById(id);
@@ -57,9 +61,7 @@ const ItemDetailPage = () => {
 
   const handleCommentSubmit = async () => {
       if(!user) return alert("로그인이 필요합니다.");
-      
       if(item.status === 'SOLD_OUT') return alert("판매가 완료된 상품입니다.");
-      
       if(!newComment.trim()) return;
       try {
           await axios.post(`/api/products/${id}/comments`, {
@@ -69,6 +71,37 @@ const ItemDetailPage = () => {
           setNewComment("");
           fetchComments(); 
       } catch (e) { alert("댓글 등록 실패"); }
+  };
+
+  // [추가] 댓글 수정 모드 진입
+  const startEdit = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
+  };
+
+  // [추가] 댓글 수정 요청
+  const handleUpdateComment = async (commentId) => {
+    try {
+        await axios.put(`/api/products/comments/${commentId}`, {
+            memberId: user.id,
+            content: editContent
+        });
+        setEditingCommentId(null);
+        fetchComments(); // 목록 갱신
+    } catch (e) {
+        alert("댓글 수정 실패");
+    }
+  };
+
+  // [추가] 댓글 삭제 요청
+  const handleDeleteComment = async (commentId) => {
+    if(!window.confirm("댓글을 삭제하시겠습니까?")) return;
+    try {
+        await axios.delete(`/api/products/comments/${commentId}?memberId=${user.id}`);
+        fetchComments();
+    } catch (e) {
+        alert("댓글 삭제 실패");
+    }
   };
 
   const handleStatusChange = async (e) => {
@@ -91,17 +124,16 @@ const ItemDetailPage = () => {
 
   if (!item) return <Container>로딩 중...</Container>;
   
-  const isAuthor = user && (user.name === item.seller || user.email === item.seller);
-  const getImageUrl = (url) => url ? (url.startsWith('http') ? url : `http://localhost:8080${url}`) : null;
-  
-  // [추가] 판매 완료 여부 확인
+  const isAuthor = user && (user.name === item.seller || user.email === item.seller); // seller 저장 방식에 따라 수정 필요할 수 있음
   const isSoldOut = item.status === 'SOLD_OUT';
+  const getImageUrl = (url) => url ? (url.startsWith('http') ? url : `http://localhost:8080${url}`) : null;
 
   return (
     <Container>
       <BackButton to="/items">← 목록으로 돌아가기</BackButton>
       
       <ItemContainer>
+        {/* ... 상단 상품 정보 (기존과 동일) ... */}
         <ItemHeader>
           <ItemInfoMain>
             <CategoryBadge>{item.category || '기타'}</CategoryBadge>
@@ -135,7 +167,6 @@ const ItemDetailPage = () => {
                       <option value="RESERVED">🟡 예약중</option>
                       <option value="SOLD_OUT">🔴 판매완료</option>
                   </StatusSelect>
-                  
                   <ButtonGroup>
                     <ActionButton onClick={() => navigate(`/items/edit/${id}`)}>수정</ActionButton>
                     <ActionButton $variant="danger" onClick={handleDelete}>삭제</ActionButton>
@@ -160,17 +191,10 @@ const ItemDetailPage = () => {
                     type="text" 
                     value={newComment} 
                     onChange={(e)=>setNewComment(e.target.value)}
-                    placeholder={
-                        isSoldOut 
-                        ? "판매가 완료되어 댓글을 작성할 수 없습니다." 
-                        : (user ? "상품에 대해 궁금한 점을 남겨주세요." : "로그인 후 작성 가능합니다.")
-                    }
+                    placeholder={isSoldOut ? "판매 완료된 상품입니다." : (user ? "댓글을 남겨주세요." : "로그인 후 작성 가능합니다.")}
                     disabled={!user || isSoldOut}
                 />
-                <CommentButton 
-                    onClick={handleCommentSubmit}
-                    disabled={!user || isSoldOut}
-                >
+                <CommentButton onClick={handleCommentSubmit} disabled={!user || isSoldOut}>
                     등록
                 </CommentButton>
             </CommentForm>
@@ -179,15 +203,42 @@ const ItemDetailPage = () => {
                 {comments.map(c => (
                     <CommentItem key={c.id}>
                         <CommentHeader>
-                            <Writer>{c.writerName}</Writer>
-                            <DateText>{new Date(c.createdAt).toLocaleString()}</DateText>
+                            <div style={{display:'flex', gap:'8px', alignItems:'baseline'}}>
+                                <Writer>{c.writerName}</Writer>
+                                <DateText>{new Date(c.createdAt).toLocaleString()}</DateText>
+                            </div>
+                            {/* [추가] 내 댓글일 때만 수정/삭제 버튼 노출 */}
+                            {user && user.id === c.memberId && (
+                                <div style={{fontSize:'0.8rem', display:'flex', gap:'8px'}}>
+                                    {editingCommentId === c.id ? (
+                                        <>
+                                            <span style={{cursor:'pointer', color:'blue'}} onClick={() => handleUpdateComment(c.id)}>저장</span>
+                                            <span style={{cursor:'pointer', color:'gray'}} onClick={() => setEditingCommentId(null)}>취소</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span style={{cursor:'pointer'}} onClick={() => startEdit(c)}>수정</span>
+                                            <span style={{cursor:'pointer', color:'red'}} onClick={() => handleDeleteComment(c.id)}>삭제</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </CommentHeader>
-                        <div>{c.content}</div>
+                        
+                        {/* 수정 모드일 때는 Input, 아니면 텍스트 표시 */}
+                        {editingCommentId === c.id ? (
+                            <CommentInput 
+                                value={editContent} 
+                                onChange={(e) => setEditContent(e.target.value)}
+                                autoFocus
+                            />
+                        ) : (
+                            <div>{c.content}</div>
+                        )}
                     </CommentItem>
                 ))}
             </CommentList>
         </CommentSection>
-
       </ItemContainer>
     </Container>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import useAuthStore from '../store/authStore'; // Store import
+import useAuthStore from '../store/authStore';
 import { Button, Container, Error, Form, FormGroup, Input, Label, LoginLink, Title } from '../styles/Signup.styled';
 
 const SignupPage = () => {
@@ -9,24 +9,30 @@ const SignupPage = () => {
     password: '',
     confirmPassword: '',
     name: '',
-    phone: ''
+    phone: '',
+    address: '' // [추가] 주소 상태 추가
   });
   const [errors, setErrors] = useState({});
   
-  // Zustand 액션 사용
   const signup = useAuthStore((state) => state.signup);
   const navigate = useNavigate();
 
   const validateForm = () => {
-    // ... (기존 유효성 검사 로직 동일) ...
     const newErrors = {};
     if (!formData.email) newErrors.email = '이메일을 입력해주세요.';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = '올바른 이메일 형식이 아닙니다.';
+    
     if (!formData.password) newErrors.password = '비밀번호를 입력해주세요.';
     else if (formData.password.length < 6) newErrors.password = '비밀번호는 최소 6자 이상이어야 합니다.';
+    
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = '비밀번호가 일치하지 않습니다.';
-    if (!formData.name) newErrors.name = '이름을 입력해주세요.';
+    
+    if (!formData.name) newErrors.name = '닉네임을 입력해주세요.';
     if (!formData.phone) newErrors.phone = '전화번호를 입력해주세요.';
+    
+    // [추가] 주소 필수 입력 체크 (선택사항으로 하려면 이 부분은 빼셔도 됩니다)
+    if (!formData.address) newErrors.address = '주소를 입력해주세요.';
+    
     return newErrors;
   };
 
@@ -47,7 +53,7 @@ const SignupPage = () => {
 
     try {
       const { confirmPassword, ...userData } = formData;
-      await signup(userData); // 백엔드 전송
+      await signup(userData);
       alert("회원가입 성공! 로그인해주세요.");
       navigate('/login');
     } catch (err) {
@@ -59,32 +65,83 @@ const SignupPage = () => {
     <Container>
       <Title>회원가입</Title>
       <Form onSubmit={handleSubmit}>
-         {/* ... 기존 Input UI 코드와 동일 ... */}
-         {/* (위 코드 복사해서 그대로 쓰시면 됩니다) */}
-         <FormGroup>
+        <FormGroup>
           <Label htmlFor="email">이메일 *</Label>
-          <Input type="email" id="email" name="email" value={formData.email} onChange={handleChange} placeholder="example@email.com"/>
+          <Input 
+            type="email" 
+            id="email" 
+            name="email" 
+            value={formData.email} 
+            onChange={handleChange} 
+            placeholder="example@email.com"
+          />
           {errors.email && <Error>{errors.email}</Error>}
         </FormGroup>
+
         <FormGroup>
           <Label htmlFor="password">비밀번호 *</Label>
-          <Input type="password" id="password" name="password" value={formData.password} onChange={handleChange} placeholder="최소 6자 이상"/>
+          <Input 
+            type="password" 
+            id="password" 
+            name="password" 
+            value={formData.password} 
+            onChange={handleChange} 
+            placeholder="최소 6자 이상"
+          />
           {errors.password && <Error>{errors.password}</Error>}
         </FormGroup>
+
         <FormGroup>
           <Label htmlFor="confirmPassword">비밀번호 확인 *</Label>
-          <Input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="비밀번호를 다시 입력하세요"/>
+          <Input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            value={formData.confirmPassword} 
+            onChange={handleChange} 
+            placeholder="비밀번호를 다시 입력하세요"
+          />
           {errors.confirmPassword && <Error>{errors.confirmPassword}</Error>}
         </FormGroup>
+
         <FormGroup>
-          <Label htmlFor="name">이름 *</Label>
-          <Input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="홍길동"/>
+          <Label htmlFor="name">닉네임 (이름) *</Label>
+          <Input 
+            type="text" 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            placeholder="홍길동"
+          />
           {errors.name && <Error>{errors.name}</Error>}
         </FormGroup>
+
         <FormGroup>
           <Label htmlFor="phone">전화번호 *</Label>
-          <Input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="010-1234-5678"/>
+          <Input 
+            type="tel" 
+            id="phone" 
+            name="phone" 
+            value={formData.phone} 
+            onChange={handleChange} 
+            placeholder="010-1234-5678"
+          />
           {errors.phone && <Error>{errors.phone}</Error>}
+        </FormGroup>
+
+        {/* [추가] 주소 입력 필드 */}
+        <FormGroup>
+          <Label htmlFor="address">주소 (거래 지역) *</Label>
+          <Input 
+            type="text" 
+            id="address" 
+            name="address" 
+            value={formData.address} 
+            onChange={handleChange} 
+            placeholder="예: 서울시 강남구"
+          />
+          {errors.address && <Error>{errors.address}</Error>}
         </FormGroup>
         
         {errors.general && <Error>{errors.general}</Error>}

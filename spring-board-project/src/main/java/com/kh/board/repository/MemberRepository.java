@@ -1,6 +1,7 @@
 package com.kh.board.repository;
 
 import com.kh.board.entity.Member;
+
 import java.util.Optional;
 
 public interface MemberRepository {

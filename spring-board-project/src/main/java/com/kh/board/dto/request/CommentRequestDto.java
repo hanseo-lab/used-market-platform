@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ReplyRequestDto {
+public class CommentRequestDto {
     private Long memberId;
     private String content;
 }

@@ -5,7 +5,7 @@ import com.kh.board.entity.Member;
 import com.kh.board.entity.Product;
 import com.kh.board.repository.MemberRepository;
 import com.kh.board.repository.ProductRepository;
-import com.kh.board.repository.ReplyRepository;
+import com.kh.board.repository.CommentRepository;
 import com.kh.board.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final ProductRepository productRepository;
-    private final ReplyRepository replyRepository;
+    private final CommentRepository replyRepository;
     private final WishlistRepository wishlistRepository;
 
     @Override
@@ -46,7 +46,6 @@ public class MemberServiceImpl implements MemberService {
         return member;
     }
 
-    // [수정] 비밀번호 검증 로직 추가
     @Override
     @Transactional
     public void deleteMember(Long id, String password) {

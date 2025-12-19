@@ -1,30 +1,27 @@
 package com.kh.board.service;
 
-import com.kh.board.dto.request.ProductRequestDto;
-import com.kh.board.dto.request.ProductUpdateDto;
-import com.kh.board.dto.request.ReplyRequestDto;
-import com.kh.board.dto.response.ProductResponseDto;
-import com.kh.board.dto.response.ReplyResponseDto;
-
+import com.kh.board.dto.request.*;
+import com.kh.board.dto.response.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.io.IOException;
 import java.util.List;
 
 public interface ProductService {
-    List<ProductResponseDto> getAllProducts();
-    List<ProductResponseDto> searchProducts(String keyword);
-    List<ProductResponseDto> getProductsByCategory(String category);
-
-    // [추가] 찜 목록 조회
-    List<ProductResponseDto> getMemberWishlist(Long memberId);
+    // [통합] 검색, 카테고리, 전체 조회를 모두 담당하는 페이징 메서드
+    Page<ProductResponseDto> getProducts(String keyword, String category, Pageable pageable);
 
     ProductResponseDto getProduct(Long id);
     ProductResponseDto createProduct(ProductRequestDto dto) throws IOException;
     ProductResponseDto updateProduct(Long id, ProductUpdateDto dto);
     void deleteProduct(Long id);
 
-    ReplyResponseDto addReply(Long productId, ReplyRequestDto dto);
-    List<ReplyResponseDto> getReplies(Long productId);
+    CommentResponseDto addComment(Long productId, CommentRequestDto dto);
+    List<CommentResponseDto> getReplies(Long productId);
+    CommentResponseDto updateComment(Long commentId, Long memberId, String content);
+    void deleteComment(Long commentId, Long memberId);
 
     boolean toggleWishlist(Long memberId, Long productId);
     boolean isWished(Long memberId, Long productId);
+    List<ProductResponseDto> getMemberWishlist(Long memberId);
 }

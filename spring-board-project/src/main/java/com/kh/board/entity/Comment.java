@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class Reply {
+public class Comment {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -27,4 +27,8 @@ public class Reply {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    public void changeContent(String content) {
+        this.content = content;
+    }
 }

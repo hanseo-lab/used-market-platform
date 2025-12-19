@@ -2,18 +2,20 @@ package com.kh.board.service;
 
 import com.kh.board.dto.request.ProductRequestDto;
 import com.kh.board.dto.request.ProductUpdateDto;
-import com.kh.board.dto.request.ReplyRequestDto;
+import com.kh.board.dto.request.CommentRequestDto;
 import com.kh.board.dto.response.ProductResponseDto;
-import com.kh.board.dto.response.ReplyResponseDto;
+import com.kh.board.dto.response.CommentResponseDto;
 import com.kh.board.entity.Member;
 import com.kh.board.entity.Product;
-import com.kh.board.entity.Reply;
+import com.kh.board.entity.Comment;
 import com.kh.board.entity.Wishlist;
 import com.kh.board.repository.MemberRepository;
 import com.kh.board.repository.ProductRepository;
-import com.kh.board.repository.ReplyRepository;
+import com.kh.board.repository.CommentRepository;
 import com.kh.board.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,35 +31,35 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
-    private final ReplyRepository replyRepository;
+    private final CommentRepository commentRepository;
     private final WishlistRepository wishlistRepository;
     private final MemberRepository memberRepository;
 
     // 파일 저장 경로 (프로젝트 루트/uploads)
     private final String uploadDir = "uploads/";
 
+    // [핵심 변경] 검색, 카테고리, 전체 조회를 통합하여 페이징 처리하는 메서드
     @Override
     @Transactional(readOnly = true)
-    public List<ProductResponseDto> getAllProducts() {
-        return productRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(ProductResponseDto::new)
-                .collect(Collectors.toList());
+    public Page<ProductResponseDto> getProducts(String keyword, String category, Pageable pageable) {
+        Page<Product> productPage;
+
+        if (keyword != null && !keyword.isBlank()) {
+            // 검색어가 있는 경우
+            productPage = productRepository.findByKeyword(keyword, pageable);
+        } else if (category != null && !category.equals("전체")) {
+            // 카테고리가 선택된 경우
+            productPage = productRepository.findByCategory(category, pageable);
+        } else {
+            // 그 외 (전체 목록)
+            productPage = productRepository.findAll(pageable);
+        }
+
+        // Entity -> DTO 변환
+        return productPage.map(ProductResponseDto::new);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProductResponseDto> searchProducts(String keyword) {
-        return productRepository.findByTitleContainingOrContentContainingOrderByCreatedAtDesc(keyword, keyword)
-                .stream().map(ProductResponseDto::new).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProductResponseDto> getProductsByCategory(String category) {
-        return productRepository.findByCategoryOrderByCreatedAtDesc(category)
-                .stream().map(ProductResponseDto::new).collect(Collectors.toList());
-    }
-
+    // 찜 목록 조회 (List 반환 유지)
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDto> getMemberWishlist(Long memberId) {
@@ -99,9 +101,8 @@ public class ProductServiceImpl implements ProductService {
                 .price(dto.getPrice())
                 .seller(dto.getSeller())
                 .category(dto.getCategory())
-                .originName(originName) // 원본명 저장
-                .changeName(changeName) // 변경명 저장
-                // status는 기본값(FOR_SALE) 사용
+                .originName(originName)
+                .changeName(changeName)
                 .viewCount(0)
                 .build();
 
@@ -117,7 +118,6 @@ public class ProductServiceImpl implements ProductService {
         String newOriginName = null;
         String newChangeName = null;
 
-        // 수정 시 새 파일이 들어왔는지 확인
         if (dto.getImageFile() != null && !dto.getImageFile().isEmpty()) {
             try {
                 String fullPath = System.getProperty("user.dir") + "/" + uploadDir;
@@ -133,7 +133,6 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // 엔티티의 수정 메서드 호출 (파일 변경 없으면 null 전달됨)
         product.updateProduct(dto, newOriginName, newChangeName);
 
         return new ProductResponseDto(product);
@@ -147,22 +146,51 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ReplyResponseDto addReply(Long productId, ReplyRequestDto dto) {
+    public CommentResponseDto addComment(Long productId, CommentRequestDto dto) {
         Product product = productRepository.findById(productId).orElseThrow();
         Member member = memberRepository.findById(dto.getMemberId()).orElseThrow();
-        Reply reply = Reply.builder()
+        Comment comment = Comment.builder()
                 .product(product)
                 .member(member)
                 .content(dto.getContent())
                 .build();
-        return new ReplyResponseDto(replyRepository.save(reply));
+        return new CommentResponseDto(commentRepository.save(comment));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReplyResponseDto> getReplies(Long productId) {
-        return replyRepository.findByProductIdOrderByCreatedAtDesc(productId)
-                .stream().map(ReplyResponseDto::new).collect(Collectors.toList());
+    public List<CommentResponseDto> getReplies(Long productId) {
+        return commentRepository.findByProductIdOrderByCreatedAtDesc(productId)
+                .stream().map(CommentResponseDto::new).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public CommentResponseDto updateComment(Long commentId, Long memberId, String content) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 댓글입니다."));
+
+        // 본인 확인
+        if (!comment.getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("댓글 수정 권한이 없습니다.");
+        }
+
+        comment.changeContent(content); // Entity에 메서드 추가 필요
+
+        return new CommentResponseDto(comment);
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(Long commentId, Long memberId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 댓글입니다."));
+
+        if (!comment.getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("댓글 삭제 권한이 없습니다.");
+        }
+
+        commentRepository.deleteById(commentId);
     }
 
     @Override

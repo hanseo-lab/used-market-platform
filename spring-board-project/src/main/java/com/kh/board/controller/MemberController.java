@@ -30,7 +30,6 @@ public class MemberController {
         return ResponseEntity.ok(memberService.updateMember(id, dto));
     }
 
-    // [수정] 비밀번호를 함께 받음
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteMember(@PathVariable Long id, @RequestBody MemberWithdrawDto dto) {
         memberService.deleteMember(id, dto.getPassword());

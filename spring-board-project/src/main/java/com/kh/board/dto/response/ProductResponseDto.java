@@ -17,7 +17,7 @@ public class ProductResponseDto {
     // 응답 시 파일명 정보 제공
     private String originName;
     private String changeName;
-    private String imageUrl; // 프론트엔드 이미지 태그용 경로 (/images/파일명)
+    private String image; // 프론트엔드 이미지 태그용 경로 (/images/파일명)
 
     private ProductStatus status;
     private String category;
@@ -35,7 +35,7 @@ public class ProductResponseDto {
         this.changeName = product.getChangeName();
         // 저장된 파일명이 있으면 접근 가능한 URL 경로 생성
         if (product.getChangeName() != null) {
-            this.imageUrl = "/images/" + product.getChangeName();
+            this.image = "/images/" + product.getChangeName();
         }
 
         this.status = product.getStatus();
