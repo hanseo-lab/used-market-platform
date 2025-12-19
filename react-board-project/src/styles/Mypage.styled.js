@@ -19,8 +19,16 @@ export const Section = styled.section`
   margin-bottom: 2rem;
 `;
 
-export const SectionTitle = styled.h2`
+// [추가] 인라인 스타일(display: flex...)을 대체할 컴포넌트
+export const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+`;
+
+export const SectionTitle = styled.h2`
+  margin-bottom: 0; /* SectionHeader 안에서 정렬을 위해 마진 제거 (필요시 조정) */
   color: #333;
 `;
 
@@ -183,8 +191,6 @@ export const EmptyState = styled.div`
   color: #666;
 `;
 
-// ... (기존 WithdrawButton 등 유지) ...
-
 export const WithdrawButton = styled.button`
   margin-top: 3rem;
   padding: 0.5rem 1rem;
@@ -203,7 +209,7 @@ export const WithdrawButton = styled.button`
   }
 `;
 
-// [추가] 모달 배경
+// 모달 배경
 export const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -217,7 +223,7 @@ export const ModalOverlay = styled.div`
   z-index: 1000;
 `;
 
-// [추가] 모달 박스
+// 모달 박스
 export const ModalContent = styled.div`
   background: white;
   padding: 2rem;
@@ -230,13 +236,13 @@ export const ModalContent = styled.div`
   gap: 1rem;
 `;
 
-// [추가] 모달 제목
+// 모달 제목
 export const ModalTitle = styled.h3`
   margin: 0 0 1rem 0;
   color: #333;
 `;
 
-// [추가] 모달 버튼 그룹
+// 모달 버튼 그룹
 export const ModalActions = styled.div`
   display: flex;
   justify-content: flex-end;

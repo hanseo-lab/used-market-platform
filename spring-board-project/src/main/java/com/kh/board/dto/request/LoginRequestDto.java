@@ -1,12 +1,13 @@
 package com.kh.board.dto.request;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class MemberUpdateDto {
-    private String address;
+@NoArgsConstructor
+public class LoginRequestDto {
+    private String email;
     private String password;
-    private String phone;
 }

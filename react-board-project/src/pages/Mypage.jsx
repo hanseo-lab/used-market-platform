@@ -7,7 +7,8 @@ import {
     Button, Container, DeleteButton, EmptyState, Form, FormGroup, Input, 
     ItemActions, ItemCard, ItemImage, ItemInfo, ItemList, ItemPrice, 
     ItemTitle, Label, Section, SectionTitle, StyledLink, Title, WithdrawButton,
-    ModalOverlay, ModalContent, ModalTitle, ModalActions // 모달 관련 스타일 추가 import
+    ModalOverlay, ModalContent, ModalTitle, ModalActions,
+    SectionHeader, ButtonGroup 
 } from '../styles/Mypage.styled';
 
 const MyPage = () => {
@@ -23,7 +24,6 @@ const MyPage = () => {
 
   const [wishlist, setWishlist] = useState([]);
   
-  // [추가] 모달 상태 및 입력 비밀번호
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawPassword, setWithdrawPassword] = useState('');
 
@@ -45,10 +45,9 @@ const MyPage = () => {
 
   const myItems = items.filter(item => item.seller === user?.name);
 
-  // ... (handleUpdate, toggleEdit, handleDelete 등 기존 로직 유지) ...
   const handleUpdate = async () => {
     try {
-      const res = await axios.put(`/api/members/${user.id}`, {
+      const res = await axios.patch(`/api/members/${user.id}`, {
         address: formData.address,
         password: formData.password || undefined
       });
@@ -61,8 +60,20 @@ const MyPage = () => {
     }
   };
 
-  const toggleEdit = () => {
-    if (isEditing) { handleUpdate(); } else { setIsEditing(true); setFormData(prev => ({ ...prev, address: user.address || '' })); }
+  const startEdit = () => {
+    setIsEditing(true);
+    setFormData({
+      address: user.address || '',
+      password: ''
+    });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setFormData({
+        address: user.address || '',
+        password: ''
+    });
   };
 
   const handleDelete = (itemId) => {
@@ -71,13 +82,11 @@ const MyPage = () => {
 
   const getImageUrl = (url) => url ? (url.startsWith('http') ? url : `http://localhost:8080${url}`) : null;
 
-  // [수정] 탈퇴 버튼 클릭 시 모달 열기
   const handleWithdrawClick = () => {
     setShowWithdrawModal(true);
     setWithdrawPassword('');
   };
 
-  // [추가] 모달에서 '탈퇴확인' 눌렀을 때 실행될 로직
   const confirmWithdraw = async () => {
       if (!withdrawPassword) {
           alert("비밀번호를 입력해주세요.");
@@ -85,7 +94,7 @@ const MyPage = () => {
       }
       
       try {
-          await deleteAccount(withdrawPassword); // 비밀번호 전달
+          await deleteAccount(withdrawPassword); 
           alert("회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
           setShowWithdrawModal(false);
           navigate('/');
@@ -102,10 +111,18 @@ const MyPage = () => {
       
       {/* 1. 내 정보 섹션 */}
       <Section>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <SectionHeader>
            <SectionTitle>내 정보</SectionTitle>
-           <Button onClick={toggleEdit}>{isEditing ? '저장 완료' : '정보 수정'}</Button>
-        </div>
+           {isEditing ? (
+             <ButtonGroup>
+               <Button $variant="secondary" onClick={handleCancel}>취소</Button>
+               <Button onClick={handleUpdate}>저장 완료</Button>
+             </ButtonGroup>
+           ) : (
+             <Button onClick={startEdit}>정보 수정</Button>
+           )}
+        </SectionHeader>
+
         <Form>
           <FormGroup>
             <Label>이메일</Label>
@@ -147,7 +164,8 @@ const MyPage = () => {
           <ItemList>
             {wishlist.map(item => (
               <ItemCard key={item.id}>
-                <ItemImage src={getImageUrl(item.imageUrl)} />
+                {/* [수정] item.imageUrl -> item.image */}
+                <ItemImage src={getImageUrl(item.image)} />
                 <ItemInfo>
                     <ItemTitle>{item.title}</ItemTitle>
                     <ItemPrice>{item.price.toLocaleString()}원</ItemPrice>
@@ -170,7 +188,8 @@ const MyPage = () => {
           <ItemList>
             {myItems.map(item => (
               <ItemCard key={item.id}>
-                <ItemImage src={getImageUrl(item.imageUrl)} />
+                {/* [수정] item.imageUrl -> item.image */}
+                <ItemImage src={getImageUrl(item.image)} />
                 <ItemInfo>
                     <ItemTitle>{item.title}</ItemTitle>
                     <ItemPrice>{item.price.toLocaleString()}원</ItemPrice>
@@ -190,7 +209,7 @@ const MyPage = () => {
         <WithdrawButton onClick={handleWithdrawClick}>회원 탈퇴</WithdrawButton>
       </div>
 
-      {/* [추가] 탈퇴 확인 모달 */}
+      {/* 탈퇴 확인 모달 */}
       {showWithdrawModal && (
           <ModalOverlay onClick={() => setShowWithdrawModal(false)}>
               <ModalContent onClick={(e) => e.stopPropagation()}>

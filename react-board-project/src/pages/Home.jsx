@@ -3,16 +3,15 @@ import useItemStore from '../store/itemStore';
 import { Banner, BannerButton, Container, ItemCard, ItemGrid, ItemImage, ItemInfo, ItemPrice, ItemTitle, Section, SectionTitle, Subtitle, Title } from '../styles/Home.styled';
 
 const HomePage = () => {
-  // fetchItems 함수도 함께 가져오기
   const { items, fetchItems } = useItemStore(); 
   
   // 페이지가 열릴 때 데이터 불러오기
   useEffect(() => {
-    fetchItems(); 
+    fetchItems('', '', 'viewCount,desc', 6);
   }, []);
 
-  // 배열의 뒤에서부터 6개를 가져와서 뒤집음 (최신순 6개)
-  const recentItems = items.slice(-6).reverse();
+  // 판매완료(SOLD_OUT)된 상품은 메인에서 제외
+  const popularItems = items.filter(item => item.status !== 'SOLD_OUT');
 
   const getImageUrl = (url) => {
     if (!url) return undefined;
@@ -28,19 +27,45 @@ const HomePage = () => {
       </Banner>
 
       <Section>
-        <SectionTitle>따끈따끈한 최신 매물 🔥</SectionTitle>
-        {recentItems.length === 0 ? (
+        <SectionTitle>지금 가장 인기있는 매물 🔥</SectionTitle>
+        {popularItems.length === 0 ? (
           <p style={{color: 'var(--text-sub)'}}>등록된 물품이 없습니다.</p>
         ) : (
           <ItemGrid>
-            {recentItems.map(item => (
+            {popularItems.map(item => (
               <ItemCard key={item.id} to={`/items/${item.id}`}>
-                <ItemImage src={getImageUrl(item.imageUrl)}> 
-                  {!item.imageUrl && '이미지 없음'}
+                {/* 이미지 컨테이너에 relative 스타일 추가 (뱃지 위치 잡기 위해) */}
+                <ItemImage 
+                    src={getImageUrl(item.image)} 
+                    style={{ position: 'relative' }}
+                > 
+                  {!item.image && '이미지 없음'}
+                  
+                  {/* 예약중일 경우 뱃지 표시 */}
+                  {item.status === 'RESERVED' && (
+                    <span style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        backgroundColor: '#ffc107', // 노란색(예약중)
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        zIndex: 1
+                    }}>
+                        예약중
+                    </span>
+                  )}
                 </ItemImage>
+                
                 <ItemInfo>
                   <ItemTitle>{item.title}</ItemTitle>
                   <ItemPrice>{item.price.toLocaleString()}원</ItemPrice>
+                  <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '4px' }}>
+                    조회 {item.viewCount}
+                  </div>
                 </ItemInfo>
               </ItemCard>
             ))}

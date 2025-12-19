@@ -3,6 +3,7 @@ package com.kh.board.service;
 import com.kh.board.dto.request.MemberUpdateDto;
 import com.kh.board.entity.Member;
 import com.kh.board.entity.Product;
+import com.kh.board.exception.ResourceNotFoundException; // [추가]
 import com.kh.board.repository.MemberRepository;
 import com.kh.board.repository.ProductRepository;
 import com.kh.board.repository.CommentRepository;
@@ -24,6 +25,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public Member login(String email, String password) {
+        // 로그인 실패는 리소스 없음이 아니라 인증 실패이므로 예외 메시지로 처리 (400 Bad Request)
         return memberRepository.findByEmailAndPassword(email, password)
                 .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 잘못되었습니다."));
     }
@@ -32,7 +34,7 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member signup(Member member) {
         if (memberRepository.findByEmail(member.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다."); // 400 (Conflict 대신 400 사용)
         }
         return memberRepository.save(member);
     }
@@ -41,7 +43,7 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member updateMember(Long id, MemberUpdateDto dto) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("회원 정보가 없습니다.")); // [수정] 404
         member.updateMember(dto);
         return member;
     }
@@ -50,26 +52,20 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public void deleteMember(Long id, String password) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 회원입니다.")); // [수정] 404
 
-        // ★ 비밀번호 확인
         if (!member.getPassword().equals(password)) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다."); // 400
         }
 
-        // 1. 찜 목록 삭제
         wishlistRepository.deleteByMemberId(id);
-
-        // 2. 댓글 삭제
         replyRepository.deleteByMemberId(id);
 
-        // 3. 상품 삭제
         List<Product> myProducts = productRepository.findBySeller(member.getName());
         for (Product product : myProducts) {
             productRepository.deleteById(product.getId());
         }
 
-        // 4. 회원 삭제
         memberRepository.deleteById(id);
     }
 }

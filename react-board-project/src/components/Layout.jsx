@@ -1,9 +1,16 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import { Footer, HeaderContainer, HeaderContent, Logo, Main, Nav, NavLink } from '../styles/Layout.styled';
 
 const Layout = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  // 매물보기 클릭 시 검색 조건을 초기화하라는 신호를 보냄
+  const handleItemsClick = (e) => {
+    e.preventDefault();
+    navigate('/items', { state: { reset: true } });
+  };
 
   return (
     <>
@@ -11,7 +18,7 @@ const Layout = () => {
         <HeaderContent>
           <Logo to="/">중고마켓</Logo>
           <Nav>
-            <NavLink to="/items">매물보기</NavLink>
+            <NavLink to="/items" onClick={handleItemsClick}>매물보기</NavLink>
             {user ? (
               <>
                 <NavLink to="/items/new">판매하기</NavLink>

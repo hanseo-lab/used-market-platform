@@ -9,6 +9,7 @@ import com.kh.board.entity.Member;
 import com.kh.board.entity.Product;
 import com.kh.board.entity.Comment;
 import com.kh.board.entity.Wishlist;
+import com.kh.board.exception.ResourceNotFoundException; // [추가]
 import com.kh.board.repository.MemberRepository;
 import com.kh.board.repository.ProductRepository;
 import com.kh.board.repository.CommentRepository;
@@ -35,31 +36,23 @@ public class ProductServiceImpl implements ProductService {
     private final WishlistRepository wishlistRepository;
     private final MemberRepository memberRepository;
 
-    // 파일 저장 경로 (프로젝트 루트/uploads)
     private final String uploadDir = "uploads/";
 
-    // [핵심 변경] 검색, 카테고리, 전체 조회를 통합하여 페이징 처리하는 메서드
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponseDto> getProducts(String keyword, String category, Pageable pageable) {
         Page<Product> productPage;
 
         if (keyword != null && !keyword.isBlank()) {
-            // 검색어가 있는 경우
             productPage = productRepository.findByKeyword(keyword, pageable);
         } else if (category != null && !category.equals("전체")) {
-            // 카테고리가 선택된 경우
             productPage = productRepository.findByCategory(category, pageable);
         } else {
-            // 그 외 (전체 목록)
             productPage = productRepository.findAll(pageable);
         }
-
-        // Entity -> DTO 변환
         return productPage.map(ProductResponseDto::new);
     }
 
-    // 찜 목록 조회 (List 반환 유지)
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDto> getMemberWishlist(Long memberId) {
@@ -72,7 +65,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto getProduct(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("상품이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id)); // [수정] 404
         product.setViewCount(product.getViewCount() + 1);
         return new ProductResponseDto(product);
     }
@@ -113,7 +106,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto dto) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("상품 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id)); // [수정] 404
 
         String newOriginName = null;
         String newChangeName = null;
@@ -134,21 +127,26 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.updateProduct(dto, newOriginName, newChangeName);
-
         return new ProductResponseDto(product);
     }
 
     @Override
     @Transactional
     public void deleteProduct(Long id) {
+        if (!productRepository.findById(id).isPresent()) {
+            throw new ResourceNotFoundException("삭제할 상품이 존재하지 않습니다."); // [추가] 검증
+        }
         productRepository.deleteById(id);
     }
 
     @Override
     @Transactional
     public CommentResponseDto addComment(Long productId, CommentRequestDto dto) {
-        Product product = productRepository.findById(productId).orElseThrow();
-        Member member = memberRepository.findById(dto.getMemberId()).orElseThrow();
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다.")); // [수정] 404
+        Member member = memberRepository.findById(dto.getMemberId())
+                .orElseThrow(() -> new ResourceNotFoundException("회원이 존재하지 않습니다.")); // [수정] 404
+
         Comment comment = Comment.builder()
                 .product(product)
                 .member(member)
@@ -168,15 +166,13 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public CommentResponseDto updateComment(Long commentId, Long memberId, String content) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 댓글입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다.")); // [수정] 404
 
-        // 본인 확인
         if (!comment.getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("댓글 수정 권한이 없습니다.");
+            throw new IllegalArgumentException("댓글 수정 권한이 없습니다."); // [유지] 400
         }
 
-        comment.changeContent(content); // Entity에 메서드 추가 필요
-
+        comment.changeContent(content);
         return new CommentResponseDto(comment);
     }
 
@@ -184,10 +180,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void deleteComment(Long commentId, Long memberId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 댓글입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다.")); // [수정] 404
 
         if (!comment.getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("댓글 삭제 권한이 없습니다.");
+            throw new IllegalArgumentException("댓글 삭제 권한이 없습니다."); // [유지] 400
         }
 
         commentRepository.deleteById(commentId);
@@ -200,8 +196,10 @@ public class ProductServiceImpl implements ProductService {
             wishlistRepository.deleteByMemberIdAndProductId(memberId, productId);
             return false;
         } else {
-            Product product = productRepository.findById(productId).orElseThrow();
-            Member member = memberRepository.findById(memberId).orElseThrow();
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new ResourceNotFoundException("상품 없음")); // [수정]
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("회원 없음")); // [수정]
             wishlistRepository.save(Wishlist.builder().member(member).product(product).build());
             return true;
         }

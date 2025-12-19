@@ -23,7 +23,6 @@ const ItemDetailPage = () => {
   const [newComment, setNewComment] = useState("");
   const [isWished, setIsWished] = useState(false);
 
-  // [추가] 댓글 수정 상태 관리
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editContent, setEditContent] = useState("");
 
@@ -73,27 +72,25 @@ const ItemDetailPage = () => {
       } catch (e) { alert("댓글 등록 실패"); }
   };
 
-  // [추가] 댓글 수정 모드 진입
   const startEdit = (comment) => {
     setEditingCommentId(comment.id);
     setEditContent(comment.content);
   };
 
-  // [추가] 댓글 수정 요청
   const handleUpdateComment = async (commentId) => {
     try {
-        await axios.put(`/api/products/comments/${commentId}`, {
+        // 댓글 수정은 @RequestBody를 사용하므로 JSON 전송이 맞음. 메서드만 patch로 변경
+        await axios.patch(`/api/products/comments/${commentId}`, {
             memberId: user.id,
             content: editContent
         });
         setEditingCommentId(null);
-        fetchComments(); // 목록 갱신
+        fetchComments(); 
     } catch (e) {
         alert("댓글 수정 실패");
     }
   };
 
-  // [추가] 댓글 삭제 요청
   const handleDeleteComment = async (commentId) => {
     if(!window.confirm("댓글을 삭제하시겠습니까?")) return;
     try {
@@ -107,11 +104,18 @@ const ItemDetailPage = () => {
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     try {
-        await axios.put(`/api/products/${id}`, { status: newStatus });
+        // 백엔드가 @ModelAttribute를 사용하므로 FormData 사용
+        const formData = new FormData();
+        formData.append('status', newStatus);
+
+        // 메서드 patch로 변경
+        await axios.patch(`/api/products/${id}`, formData);
+        
         setItem(prev => ({ ...prev, status: newStatus }));
         alert("상태가 변경되었습니다.");
     } catch (e) {
-        alert("상태 변경 실패");
+        console.error(e);
+        alert("상태 변경 실패: " + (e.response?.data?.message || "서버 오류"));
     }
   };
 
@@ -124,7 +128,7 @@ const ItemDetailPage = () => {
 
   if (!item) return <Container>로딩 중...</Container>;
   
-  const isAuthor = user && (user.name === item.seller || user.email === item.seller); // seller 저장 방식에 따라 수정 필요할 수 있음
+  const isAuthor = user && (user.name === item.seller || user.email === item.seller); 
   const isSoldOut = item.status === 'SOLD_OUT';
   const getImageUrl = (url) => url ? (url.startsWith('http') ? url : `http://localhost:8080${url}`) : null;
 
@@ -133,7 +137,6 @@ const ItemDetailPage = () => {
       <BackButton to="/items">← 목록으로 돌아가기</BackButton>
       
       <ItemContainer>
-        {/* ... 상단 상품 정보 (기존과 동일) ... */}
         <ItemHeader>
           <ItemInfoMain>
             <CategoryBadge>{item.category || '기타'}</CategoryBadge>
@@ -176,8 +179,8 @@ const ItemDetailPage = () => {
           </ActionSection>
         </ItemHeader>
 
-        {item.imageUrl ? (
-            <ItemImage src={getImageUrl(item.imageUrl)} alt={item.title} />
+        {item.image ? (
+            <ItemImage src={getImageUrl(item.image)} alt={item.title} />
         ) : (
             <NoImage>이미지가 없습니다</NoImage>
         )}
@@ -207,7 +210,6 @@ const ItemDetailPage = () => {
                                 <Writer>{c.writerName}</Writer>
                                 <DateText>{new Date(c.createdAt).toLocaleString()}</DateText>
                             </div>
-                            {/* [추가] 내 댓글일 때만 수정/삭제 버튼 노출 */}
                             {user && user.id === c.memberId && (
                                 <div style={{fontSize:'0.8rem', display:'flex', gap:'8px'}}>
                                     {editingCommentId === c.id ? (
@@ -225,7 +227,6 @@ const ItemDetailPage = () => {
                             )}
                         </CommentHeader>
                         
-                        {/* 수정 모드일 때는 Input, 아니면 텍스트 표시 */}
                         {editingCommentId === c.id ? (
                             <CommentInput 
                                 value={editContent} 

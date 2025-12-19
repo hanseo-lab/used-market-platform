@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -42,13 +43,26 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .getResultList();
     }
 
-    // --- [여기서부터 페이징 메서드 구현] ---
+    // [헬퍼 메서드] Pageable의 정렬(Sort) 정보를 JPQL "order by" 절로 변환
+    private String getOrderClause(Pageable pageable) {
+        if (pageable.getSort().isEmpty()) {
+            return " order by p.createdAt desc"; // 기본 정렬: 최신순
+        }
+
+        return " order by " + pageable.getSort().stream()
+                .map(order -> "p." + order.getProperty() + " " + order.getDirection().name())
+                .collect(Collectors.joining(", "));
+    }
 
     // 1. 전체 목록 페이징
     @Override
     public Page<Product> findAll(Pageable pageable) {
         Long totalCount = em.createQuery("select count(p) from Product p", Long.class).getSingleResult();
-        List<Product> products = em.createQuery("select p from Product p order by p.createdAt desc", Product.class)
+
+        // 동적 정렬 적용
+        String jpql = "select p from Product p" + getOrderClause(pageable);
+
+        List<Product> products = em.createQuery(jpql, Product.class)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
                 .getResultList();
@@ -63,8 +77,10 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .setParameter("kw", "%" + keyword + "%")
                 .getSingleResult();
 
-        List<Product> products = em.createQuery(
-                        "select p from Product p where p.title like :kw or p.content like :kw order by p.createdAt desc", Product.class)
+        // 동적 정렬 적용
+        String jpql = "select p from Product p where (p.title like :kw or p.content like :kw)" + getOrderClause(pageable);
+
+        List<Product> products = em.createQuery(jpql, Product.class)
                 .setParameter("kw", "%" + keyword + "%")
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
@@ -81,8 +97,10 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .setParameter("category", category)
                 .getSingleResult();
 
-        List<Product> products = em.createQuery(
-                        "select p from Product p where p.category = :category order by p.createdAt desc", Product.class)
+        // 동적 정렬 적용
+        String jpql = "select p from Product p where p.category = :category" + getOrderClause(pageable);
+
+        List<Product> products = em.createQuery(jpql, Product.class)
                 .setParameter("category", category)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())

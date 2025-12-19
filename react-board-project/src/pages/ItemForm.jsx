@@ -15,7 +15,16 @@ const ItemFormPage = () => {
   const [content, setContent] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('기타'); 
-  const [imageFile, setImageFile] = useState(null);
+  
+  // 이미지 관련 state 추가
+  const [imageFile, setImageFile] = useState(null); 
+  const [existingImageUrl, setExistingImageUrl] = useState(null); 
+  const [previewUrl, setPreviewUrl] = useState(null); 
+
+  const getFullImageUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `http://localhost:8080${url}`;
+  };
 
   useEffect(() => {
     if (id) {
@@ -26,6 +35,10 @@ const ItemFormPage = () => {
           setContent(data.content);
           setPrice(data.price);
           setCategory(data.category || '기타');
+          
+          if (data.image) {
+            setExistingImageUrl(getFullImageUrl(data.image));
+          }
         })
         .catch(err => {
           alert("상품 정보를 불러오지 못했습니다.");
@@ -34,38 +47,52 @@ const ItemFormPage = () => {
     }
   }, [id, navigate]);
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setImageFile(null);
+      setPreviewUrl(null);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 브라우저 required 속성이 1차로 막아주지만, 이중 체크
     if (!title || !content || !price) {
       alert('필수 항목을 모두 입력해주세요.');
       return;
     }
 
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('content', content);
+    formData.append('price', price);
+    formData.append('category', category);
+    formData.append('status', 'FOR_SALE'); 
+    
+    if (!id) {
+        formData.append('seller', user?.name || '익명');
+    }
+
+    if (imageFile) {
+        formData.append('imageFile', imageFile);
+    }
+
     try {
       if (id) {
-        await axios.put(`/api/products/${id}`, {
-          title, content, price: parseInt(price), 
-          category, status: 'FOR_SALE'
-        });
+        await axios.patch(`/api/products/${id}`, formData);
         alert('수정되었습니다.');
       } else {
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('content', content);
-        formData.append('price', price);
-        formData.append('category', category);
-        formData.append('seller', user?.name || '익명');
-        if (imageFile) formData.append('imageFile', imageFile);
-
         await axios.post('/api/products', formData);
         alert('등록되었습니다!');
       }
       navigate('/items');
     } catch (error) {
       console.error(error);
-      alert('오류 발생');
+      alert('오류 발생: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -94,13 +121,29 @@ const ItemFormPage = () => {
           />
         </FormGroup>
 
-        {!id && (
-            <FormGroup>
-                <Label>사진</Label>
-                {/* 사진은 필수가 아니면 RequiredMark 생략 */}
-                <Input type="file" accept="image/*" onChange={(e)=>setImageFile(e.target.files[0])} />
-            </FormGroup>
-        )}
+        <FormGroup>
+            <Label>사진</Label>
+            {(previewUrl || existingImageUrl) && (
+              <div style={{ marginBottom: '10px' }}>
+                <img 
+                  src={previewUrl || existingImageUrl} 
+                  alt="상품 미리보기" 
+                  style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                />
+              </div>
+            )}
+            
+            <Input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageChange} 
+            />
+            {id && existingImageUrl && !previewUrl && (
+              <small style={{ color: '#888', marginTop: '5px', display: 'block' }}>
+                파일을 선택하지 않으면 기존 이미지가 유지됩니다.
+              </small>
+            )}
+        </FormGroup>
 
         <FormGroup>
           <Label>가격 <RequiredMark>*</RequiredMark></Label>

@@ -1,10 +1,13 @@
 package com.kh.board.controller;
 
+import com.kh.board.dto.request.LoginRequestDto;
+import com.kh.board.dto.request.MemberSignupDto;
 import com.kh.board.dto.request.MemberUpdateDto;
-import com.kh.board.dto.request.MemberWithdrawDto; // DTO import
+import com.kh.board.dto.response.MemberResponseDto;
 import com.kh.board.entity.Member;
 import com.kh.board.service.MemberService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,24 +18,50 @@ public class MemberController {
 
     private final MemberService memberService;
 
-    @PostMapping("/signup")
-    public ResponseEntity<Member> signup(@RequestBody Member member) {
-        return ResponseEntity.ok(memberService.signup(member));
+    /**
+     * 1. 회원가입
+     */
+    @PostMapping
+    public ResponseEntity<MemberResponseDto> signup(@RequestBody MemberSignupDto requestDto) {
+        Member member = Member.builder()
+                .email(requestDto.getEmail())
+                .password(requestDto.getPassword())
+                .name(requestDto.getName())
+                .phone(requestDto.getPhone())
+                .address(requestDto.getAddress())
+                .build();
+
+        Member savedMember = memberService.signup(member);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new MemberResponseDto(savedMember));
     }
 
+    /**
+     * 2. 로그인
+     */
     @PostMapping("/login")
-    public ResponseEntity<Member> login(@RequestBody Member member) {
-        return ResponseEntity.ok(memberService.login(member.getEmail(), member.getPassword()));
+    public ResponseEntity<MemberResponseDto> login(@RequestBody LoginRequestDto requestDto) {
+        Member member = memberService.login(requestDto.getEmail(), requestDto.getPassword());
+        return ResponseEntity.ok(new MemberResponseDto(member));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Member> updateMember(@PathVariable Long id, @RequestBody MemberUpdateDto dto) {
-        return ResponseEntity.ok(memberService.updateMember(id, dto));
+    /**
+     * 3. 회원 정보 수정
+     */
+    @PatchMapping("/{id}")
+    public ResponseEntity<MemberResponseDto> updateMember(@PathVariable Long id, @RequestBody MemberUpdateDto dto) {
+        Member updatedMember = memberService.updateMember(id, dto);
+        return ResponseEntity.ok(new MemberResponseDto(updatedMember));
     }
 
+    /**
+     * 4. 회원 탈퇴
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteMember(@PathVariable Long id, @RequestBody MemberWithdrawDto dto) {
-        memberService.deleteMember(id, dto.getPassword());
+    public ResponseEntity<String> deleteMember(@PathVariable Long id, @RequestHeader("password") String password) {
+        // 기존 MemberWithdrawDto는 사용하지 않고 바로 password 문자열을 받습니다.
+        memberService.deleteMember(id, password);
         return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
     }
 }

@@ -27,15 +27,23 @@ public class Member {
     @Column(nullable = false)
     private String name;
 
+    private String phone;
+
     private String address;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    // 회원 정보 수정 메서드
     public void updateMember(MemberUpdateDto dto) {
         if (dto.getAddress() != null) {
             this.address = dto.getAddress();
         }
+
+         if (dto.getPhone() != null) {
+             this.phone = dto.getPhone();
+         }
+
         // 비밀번호가 입력된 경우에만 변경
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             this.password = dto.getPassword();
