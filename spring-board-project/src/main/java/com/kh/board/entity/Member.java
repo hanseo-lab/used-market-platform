@@ -31,6 +31,8 @@ public class Member {
 
     private String address;
 
+    private String detailAddress;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -39,12 +41,15 @@ public class Member {
         if (dto.getAddress() != null) {
             this.address = dto.getAddress();
         }
+        // 필요하다면 detailAddress 수정 로직도 여기에 추가
+        if (dto.getDetailAddress() != null){
+            this.detailAddress = dto.getDetailAddress();
+        }
 
-         if (dto.getPhone() != null) {
-             this.phone = dto.getPhone();
-         }
+        if (dto.getPhone() != null) {
+            this.phone = dto.getPhone();
+        }
 
-        // 비밀번호가 입력된 경우에만 변경
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             this.password = dto.getPassword();
         }

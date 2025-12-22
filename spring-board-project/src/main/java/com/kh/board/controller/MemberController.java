@@ -29,6 +29,7 @@ public class MemberController {
                 .name(requestDto.getName())
                 .phone(requestDto.getPhone())
                 .address(requestDto.getAddress())
+                .detailAddress(requestDto.getDetailAddress()) // [추가] 상세 주소 저장
                 .build();
 
         Member savedMember = memberService.signup(member);

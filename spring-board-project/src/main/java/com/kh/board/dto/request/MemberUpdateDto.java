@@ -9,4 +9,5 @@ public class MemberUpdateDto {
     private String address;
     private String password;
     private String phone;
+    private String detailAddress;
 }
