@@ -11,7 +11,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
 
   const login = useAuthStore((state) => state.login);
-  
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -32,10 +31,14 @@ const LoginPage = () => {
     }
 
     try {
+      // store의 login 함수 호출
       await login(formData.email, formData.password);
-      navigate('/');
+      
+      // 로그인 성공 시 메인 페이지로 이동
+      // (토큰 저장은 store에서 처리됨)
+      navigate('/', { replace: true }); 
     } catch (err) {
-      // 에러 메시지 처리 (백엔드 응답 없을 경우 대비)
+      // store에서 던진 에러 메시지 표시
       setError(err.message || '로그인에 실패했습니다.');
     }
   };

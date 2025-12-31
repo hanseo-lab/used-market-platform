@@ -7,7 +7,7 @@ import SignupPage from '../pages/Signup';
 import ItemListPage from '../pages/ItemList';
 import ItemDetailPage from '../pages/ItemDetail';
 import ItemFormPage from '../pages/ItemForm';
-import MyPage from '../pages/MyPage';
+import MyPage from '../pages/Mypage';
 import NotFoundPage from '../pages/NotFound';
 
 const AppRoutes = () => {
