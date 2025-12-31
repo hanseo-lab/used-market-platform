@@ -9,7 +9,7 @@ import com.kh.board.entity.Member;
 import com.kh.board.entity.Product;
 import com.kh.board.entity.Comment;
 import com.kh.board.entity.Wishlist;
-import com.kh.board.exception.ResourceNotFoundException; // [추가]
+import com.kh.board.global.exception.ResourceNotFoundException;
 import com.kh.board.repository.MemberRepository;
 import com.kh.board.repository.ProductRepository;
 import com.kh.board.repository.CommentRepository;
@@ -65,8 +65,12 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto getProduct(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id)); // [수정] 404
-        product.setViewCount(product.getViewCount() + 1);
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id));
+
+        // [수정 핵심] viewCount가 NULL일 경우 0으로 처리하여 에러 방지
+        int currentCount = (product.getViewCount() == null) ? 0 : product.getViewCount();
+        product.setViewCount(currentCount + 1);
+
         return new ProductResponseDto(product);
     }
 
@@ -96,7 +100,7 @@ public class ProductServiceImpl implements ProductService {
                 .category(dto.getCategory())
                 .originName(originName)
                 .changeName(changeName)
-                .viewCount(0)
+                .viewCount(0) // 초기값 0 명시
                 .build();
 
         return new ProductResponseDto(productRepository.save(product));
@@ -106,7 +110,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto dto) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id)); // [수정] 404
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다. id=" + id));
 
         String newOriginName = null;
         String newChangeName = null;
@@ -134,7 +138,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.findById(id).isPresent()) {
-            throw new ResourceNotFoundException("삭제할 상품이 존재하지 않습니다."); // [추가] 검증
+            throw new ResourceNotFoundException("삭제할 상품이 존재하지 않습니다.");
         }
         productRepository.deleteById(id);
     }
@@ -143,9 +147,9 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public CommentResponseDto addComment(Long productId, CommentRequestDto dto) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다.")); // [수정] 404
+                .orElseThrow(() -> new ResourceNotFoundException("상품이 존재하지 않습니다."));
         Member member = memberRepository.findById(dto.getMemberId())
-                .orElseThrow(() -> new ResourceNotFoundException("회원이 존재하지 않습니다.")); // [수정] 404
+                .orElseThrow(() -> new ResourceNotFoundException("회원이 존재하지 않습니다."));
 
         Comment comment = Comment.builder()
                 .product(product)
@@ -166,10 +170,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public CommentResponseDto updateComment(Long commentId, Long memberId, String content) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다.")); // [수정] 404
+                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다."));
 
         if (!comment.getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("댓글 수정 권한이 없습니다."); // [유지] 400
+            throw new IllegalArgumentException("댓글 수정 권한이 없습니다.");
         }
 
         comment.changeContent(content);
@@ -180,10 +184,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void deleteComment(Long commentId, Long memberId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다.")); // [수정] 404
+                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 댓글입니다."));
 
         if (!comment.getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("댓글 삭제 권한이 없습니다."); // [유지] 400
+            throw new IllegalArgumentException("댓글 삭제 권한이 없습니다.");
         }
 
         commentRepository.deleteById(commentId);
@@ -197,9 +201,9 @@ public class ProductServiceImpl implements ProductService {
             return false;
         } else {
             Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new ResourceNotFoundException("상품 없음")); // [수정]
+                    .orElseThrow(() -> new ResourceNotFoundException("상품 없음"));
             Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new ResourceNotFoundException("회원 없음")); // [수정]
+                    .orElseThrow(() -> new ResourceNotFoundException("회원 없음"));
             wishlistRepository.save(Wishlist.builder().member(member).product(product).build());
             return true;
         }
