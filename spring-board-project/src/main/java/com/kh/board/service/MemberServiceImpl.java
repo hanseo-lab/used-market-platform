@@ -1,71 +1,83 @@
 package com.kh.board.service;
 
+import com.kh.board.dto.request.LoginRequestDto;
+import com.kh.board.dto.request.MemberSignupDto;
 import com.kh.board.dto.request.MemberUpdateDto;
+import com.kh.board.dto.response.MemberResponseDto;
 import com.kh.board.entity.Member;
-import com.kh.board.entity.Product;
-import com.kh.board.exception.ResourceNotFoundException; // [추가]
+import com.kh.board.global.security.JwtTokenProvider;
 import com.kh.board.repository.MemberRepository;
-import com.kh.board.repository.ProductRepository;
-import com.kh.board.repository.CommentRepository;
-import com.kh.board.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
-    private final ProductRepository productRepository;
-    private final CommentRepository replyRepository;
-    private final WishlistRepository wishlistRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
-    @Override
-    public Member login(String email, String password) {
-        // 로그인 실패는 리소스 없음이 아니라 인증 실패이므로 예외 메시지로 처리 (400 Bad Request)
-        return memberRepository.findByEmailAndPassword(email, password)
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 잘못되었습니다."));
-    }
-
+    // 회원가입
     @Override
     @Transactional
-    public Member signup(Member member) {
-        if (memberRepository.findByEmail(member.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다."); // 400 (Conflict 대신 400 사용)
+    public Long signup(MemberSignupDto requestDto) {
+        if (memberRepository.existsByEmail(requestDto.getEmail())) {
+            throw new IllegalArgumentException("이미 가입된 이메일입니다: " + requestDto.getEmail());
         }
-        return memberRepository.save(member);
+        Member member = requestDto.toEntity(passwordEncoder);
+        memberRepository.save(member);
+        return member.getId();
     }
 
+    // 로그인
+    @Override
+    public String login(LoginRequestDto requestDto) {
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
+
+        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
+
+        return jwtTokenProvider.generateToken(authentication);
+    }
+
+    // 회원 정보 수정
     @Override
     @Transactional
     public Member updateMember(Long id, MemberUpdateDto dto) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("회원 정보가 없습니다.")); // [수정] 404
+                .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
         member.updateMember(dto);
+
         return member;
     }
 
+    // 회원 단건 조회
+    @Override
+    public MemberResponseDto getMember(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다. ID: " + memberId));
+        return MemberResponseDto.from(member);
+    }
+
+    // 회원 탈퇴
     @Override
     @Transactional
-    public void deleteMember(Long id, String password) {
-        Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 회원입니다.")); // [수정] 404
+    public void deleteMember(Long memberId, String password) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
-        if (!member.getPassword().equals(password)) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다."); // 400
+        if (!passwordEncoder.matches(password, member.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        wishlistRepository.deleteByMemberId(id);
-        replyRepository.deleteByMemberId(id);
-
-        List<Product> myProducts = productRepository.findBySeller(member.getName());
-        for (Product product : myProducts) {
-            productRepository.deleteById(product.getId());
-        }
-
-        memberRepository.deleteById(id);
+        memberRepository.delete(member);
     }
 }

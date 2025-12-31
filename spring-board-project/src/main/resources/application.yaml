@@ -3,35 +3,37 @@ spring:
     name: jpa
 
   datasource:
-    hikari:
-      jdbc-url: jdbc:h2:tcp://localhost/C:\usedMarketPlatform\db/tdb;
-      driver-class-name: org.h2.Driver
-      username: sa
-      password: 1234
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    # [MySQL 설정]
+    url: jdbc:mysql://localhost:3306/market_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: "0000"  # [수정됨] 사용자님이 설정하신 비밀번호
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 100MB
   file:
     upload-dir: uploads/
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        # [MySQL 방언 설정]
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
 server:
   port: 8080
-
   servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
+
+jwt:
+  secret: V80Ze1dBZ4Wu5C3hy0udBGcmfFAd+le3rbGOvY/jVOM=
+  expiration: 86400000

@@ -1,6 +1,7 @@
 package com.kh.board.entity;
 
 import com.kh.board.dto.request.MemberUpdateDto;
+import com.kh.board.global.common.CommonEnums;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -33,15 +34,23 @@ public class Member {
 
     private String detailAddress;
 
+    @Enumerated(EnumType.STRING)
+    private CommonEnums.Role role;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    // 회원 정보 수정 메서드
+    // [수정] 회원 정보 수정 메서드 (Setter 대신 이 메서드를 사용)
     public void updateMember(MemberUpdateDto dto) {
+        // 이름 수정 로직 추가
+        if (dto.getName() != null) {
+            this.name = dto.getName();
+        }
+
         if (dto.getAddress() != null) {
             this.address = dto.getAddress();
         }
-        // 필요하다면 detailAddress 수정 로직도 여기에 추가
+
         if (dto.getDetailAddress() != null){
             this.detailAddress = dto.getDetailAddress();
         }
