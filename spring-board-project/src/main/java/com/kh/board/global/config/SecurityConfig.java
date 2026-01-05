@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/members/signup", "/api/products/**").permitAll() // 로그인, 회원가입, 상품조회 허용
+                        .requestMatchers("/api/auth/**", "/api/members/signup", "/api/members/login", "/api/products/**", "/images/**").permitAll() // 로그인, 회원가입, 상품조회, 이미지 허용
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);

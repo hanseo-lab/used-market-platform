@@ -22,7 +22,7 @@ const useAuthStore = create((set, get) => ({
   
   signup: async (userData) => { 
     try {
-      const response = await axios.post(`${API_URL}`, userData);
+      const response = await axios.post(`${API_URL}/signup`, userData);
       return response.data;
     } catch (error) {
       const message = error.response?.data?.message || '회원가입 실패: 서버 오류가 발생했습니다.';

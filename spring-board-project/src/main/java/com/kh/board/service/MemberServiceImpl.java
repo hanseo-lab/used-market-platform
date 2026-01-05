@@ -9,8 +9,6 @@ import com.kh.board.global.security.JwtTokenProvider;
 import com.kh.board.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +21,6 @@ public class MemberServiceImpl implements MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
     // 회원가입
     @Override
@@ -40,12 +37,22 @@ public class MemberServiceImpl implements MemberService {
     // 로그인
     @Override
     public String login(LoginRequestDto requestDto) {
+        // 1. 이메일로 회원 조회
+        Member member = memberRepository.findByEmail(requestDto.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // 3. 인증 토큰 생성용 객체 (Principal: email, 권한: ROLE_ 접두사 추가)
         UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
+                new UsernamePasswordAuthenticationToken(requestDto.getEmail(), null,
+                        java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + member.getRole().name())));
 
-        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
-
-        return jwtTokenProvider.generateToken(authentication);
+        // 4. JWT 토큰 생성
+        return jwtTokenProvider.generateToken(authenticationToken);
     }
 
     // 회원 정보 수정

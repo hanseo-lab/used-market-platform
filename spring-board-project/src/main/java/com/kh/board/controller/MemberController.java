@@ -5,6 +5,7 @@ import com.kh.board.dto.request.MemberSignupDto;
 import com.kh.board.dto.request.MemberUpdateDto;
 import com.kh.board.dto.response.MemberResponseDto;
 import com.kh.board.entity.Member;
+import com.kh.board.repository.MemberRepository;
 import com.kh.board.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class MemberController {
 
     private final MemberService memberService;
+    private final MemberRepository memberRepository;
 
     // 1. 회원가입 (파라미터 타입 MemberSignupDto로 변경)
     @PostMapping("/signup")
@@ -27,13 +29,23 @@ public class MemberController {
         return ResponseEntity.ok(memberId);
     }
 
-    // 2. 로그인 (토큰 반환하도록 수정)
+    // 2. 로그인 (토큰과 사용자 정보 반환)
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequestDto requestDto) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequestDto requestDto) {
         String token = memberService.login(requestDto);
 
-        Map<String, String> response = new HashMap<>();
+        // 로그인한 사용자 정보 조회
+        Member member = memberRepository.findByEmail(requestDto.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        MemberResponseDto memberDto = MemberResponseDto.from(member);
+
+        Map<String, Object> response = new HashMap<>();
         response.put("accessToken", token);
+        response.put("id", memberDto.getId());
+        response.put("email", memberDto.getEmail());
+        response.put("name", memberDto.getName());
+        response.put("phone", memberDto.getPhone());
+        response.put("address", memberDto.getAddress());
 
         return ResponseEntity.ok(response);
     }
